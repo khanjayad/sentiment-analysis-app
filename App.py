@@ -13,17 +13,16 @@ from io import BytesIO
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
-# Load sentiment analysis model
+
 classifier = pipeline("sentiment-analysis")
 
-# Fetch headlines and links from Google News RSS
 def fetch_headlines(keyword):
     rss_url = f"https://news.google.com/rss/search?q={keyword}&hl=en-IN&gl=IN&ceid=IN:en"
     feed = feedparser.parse(rss_url)
     headlines = [(entry.title, entry.link) for entry in feed.entries[:20]]
     return headlines
 
-# Analyze sentiment of each headline
+
 def analyze_sentiment(headlines):
     texts = [title for title, link in headlines]
     results = classifier(texts)
@@ -32,7 +31,7 @@ def analyze_sentiment(headlines):
         for (text, url), r in zip(headlines, results)
     ]
 
-# Generate bar and pie charts
+
 def generate_charts(sentiment_data):
     df = pd.DataFrame(sentiment_data)
     sentiment_counts = df['sentiment'].value_counts().reset_index()
@@ -41,7 +40,7 @@ def generate_charts(sentiment_data):
     pie_chart = px.pie(sentiment_counts, names='Sentiment', values='Count', title='Sentiment Distribution')
     return bar_chart.to_html(full_html=False), pie_chart.to_html(full_html=False)
 
-# Generate wordcloud image
+
 def generate_wordcloud(texts):
     wc = WordCloud(width=800, height=400, background_color='white', stopwords=STOPWORDS)
     wc.generate(" ".join(texts))
@@ -50,7 +49,6 @@ def generate_wordcloud(texts):
     img_str = base64.b64encode(buffer.getvalue()).decode()
     return img_str
 
-# Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
     headlines = []
