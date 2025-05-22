@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>News Sentiment Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Roboto&display=swap" rel="stylesheet">
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #1e1e2f;
+            --card-color: #2a2a40;
+            --text-color: #ffffff;
+            --highlight: #00ffc8;
+            --accent: #ff8c00;
+        }
+
+        body.light-mode {
+            --bg-color: #f5f5f5;
+            --card-color: #ffffff;
+            --text-color: #111111;
+            --highlight: #0077ff;
+            --accent: #ff6600;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        header {
+            background-color: #111;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--highlight);
+        }
+
+        .ticker {
+            overflow: hidden;
+            white-space: nowrap;
+            box-sizing: border-box;
+            background: var(--accent);
+            color: #000;
+            font-weight: bold;
+            padding: 10px;
+        }
+
+        .ticker-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: scroll 60s linear infinite;
+        }
+
+        .ticker:hover .ticker-text {
+            animation-play-state: paused;
+        }
+
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        form {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: 70%;
+            max-width: 500px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--highlight);
+            border: none;
+            color: #000;
+            border-radius: 5px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .headlines {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .headline-card {
+            background-color: var(--card-color);
+            padding: 1rem;
+            border-radius: 10px;
+            flex: 1 1 45%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .headline-card:hover {
+            transform: scale(1.03);
+        }
+
+        .headline-card a {
+            color: var(--highlight);
+            text-decoration: none;
+        }
+
+        .summary {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .charts, .wordclouds {
+            margin-bottom: 2rem;
+        }
+
+        .wordcloud {
+            text-align: center;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+        }
+
+        .toggle-container {
+            text-align: center;
+            margin: 1rem;
+        }
+
+        .toggle-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--highlight);
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .toggle-button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+<header>News Sentiment Analyzer</header>
+
+<div class="toggle-container">
+    <button class="toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+</div>
+
+{% if headlines %}
+    <div class="ticker">
+        <div class="ticker-text">
+            {% for h in headlines %}
+                {{ h.text }} • 
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<div class="container">
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="post">
+        <input type="text" name="keyword" placeholder="Enter a keyword..." value="{{ keyword }}">
+        <button type="submit">Analyze</button>
+    </form>
+
+    {% if headlines %}
+        <div class="summary">
+            <p><strong>Keyword:</strong> {{ keyword }}</p>
+            <p>
+                🟢 Positive: {{ positive_count }} |
+                🔴 Negative: {{ negative_count }} |
+                ⚪ Neutral: {{ neutral_count }}
+            </p>
+        </div>
+
+        <div class="headlines">
+            {% for h in headlines %}
+                <div class="headline-card">
+                    <p><strong>{{ h.sentiment }}</strong> ({{ h.score }})</p>
+                    <a href="{{ h.url }}" target="_blank">{{ h.text }}</a>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="charts">
+            {{ bar_chart | safe }}
+            {{ pie_chart | safe }}
+        </div>
+
+        <div class="wordclouds">
+            {% if positive_wc %}
+                <div class="wordcloud">
+                    <h3>Positive WordCloud</h3>
+                    <img src="{{ positive_wc }}">
+                </div>
+            {% endif %}
+
+            {% if negative_wc %}
+                <div class="wordcloud">
+                    <h3>Negative WordCloud</h3>
+                    <img src="{{ negative_wc }}">
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+    }
+</script>
+
+</body>
+</html>
